@@ -68,9 +68,9 @@ const char* ssid = " 𝗙𝗿𝗮𝗻𝗰𝗼";     // Network name
 const char* pass = "12346789";    // Network password
 
 // ThinkSpeak credentials – account and the defined channels
-const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";
-const char* clientID       = "FSIPNTozNBIMIzMSDAUfDj0";
-const char* mqttPass       = "AxH7xNM6mYufHIcV8B59V7gN";
+const char* clientID       = "FSIPNTozNBIMIzMSDAUfDj0";     // User MQTT client ID
+const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";     // User MQTT client ID
+const char* mqttPass       = "AxH7xNM6mYufHIcV8B59V7gN";    // Server MQTT password
 
 // MQTT broker server
 const char* server = "mqtt3.thingspeak.com";
@@ -79,7 +79,7 @@ const char* server = "mqtt3.thingspeak.com";
 PubSubClient mqttClient(client);
 
 // Channel ID defined in the ThinkSpeak account. Up to eight fields per channel
-#define channelID 3150934         // Holds three fields: La, Lo & Time
+#define channelID 3150934         // Channel ID
 
 // ThingSpeak certificate
   const char * PROGMEM thingspeak_ca_cert = \
