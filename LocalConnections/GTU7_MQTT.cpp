@@ -62,15 +62,13 @@ int updateInterval = 10;          // Sensor readings are published every 10 seco
 long lastUpdate = 0;              // To hold the value of last call of the millis() function
 
 // WiFi set-up variables and credentials
-int connectionDelay = 3;          // Delay (s) between trials to connect to WiFi
-int status = WL_IDLE_STATUS;      // Initial state of the wifi connection
-const char* ssid = " 𝗙𝗿𝗮𝗻𝗰𝗼";     // Network name
-const char* pass = "12346789";    // Network password
+const char* ssid = "Tec-IoT";                     // Network name
+const char* pass = "potless.magnetic.bridge";     // Network password
 
 // ThinkSpeak credentials – account and the defined channels
-const char* clientID       = "FSIPNTozNBIMIzMSDAUfDj0";     // User MQTT client ID
-const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";     // User MQTT client ID
-const char* mqttPass       = "AxH7xNM6mYufHIcV8B59V7gN";    // Server MQTT password
+const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";
+const char* clientID       = "FSIPNTozNBIMIzMSDAUfDj0";
+const char* mqttPass       = "AxH7xNM6mYufHIcV8B59V7gN";
 
 // MQTT broker server
 const char* server = "mqtt3.thingspeak.com";
@@ -79,7 +77,7 @@ const char* server = "mqtt3.thingspeak.com";
 PubSubClient mqttClient(client);
 
 // Channel ID defined in the ThinkSpeak account. Up to eight fields per channel
-#define channelID 3150934         // Channel ID
+#define channelID 3150934         // Holds three fields: La, Lo & Time
 
 // ThingSpeak certificate
   const char * PROGMEM thingspeak_ca_cert = \
@@ -274,11 +272,11 @@ void display_gps() {
 
 // Function to connect to WiFi
 void wifi_connect() {
+  if(WiFi.status() == WL_CONNECTED) return;
   Serial.println( "Connecting...\n");
-  // Loop until WiFi connection is successful
   while(WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, pass);
-    delay(1000*connectionDelay);
+    delay(3000);
     Serial.println(WiFi.status());
   }
   Serial.println("Connected to Wi-Fi.");
