@@ -64,7 +64,7 @@ long lastUpdate = 0;              // To hold the value of last call of the milli
 // WiFi set-up variables and credentials
 const int connectionDelay = 3000;                 // Delay between attemps
 const char* ssid = "Tec-IoT";                     // Network name
-const char* pass = "potless.magnetic.bridge";     // Network password
+const char* pass = "spotless.magnetic.bridge";    // Network password
 
 // ThinkSpeak credentials – account and the defined channels
 const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";
