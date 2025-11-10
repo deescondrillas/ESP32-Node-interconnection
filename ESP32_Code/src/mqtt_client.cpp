@@ -108,6 +108,7 @@ bool mqttPublish(long pubChannelID,
 }
 
 void publishData() {
+    updateGPS();
     float rssi = getRSSI();
     float down = getThroughputDown();
     float up = getThroughputUp();
@@ -115,5 +116,4 @@ void publishData() {
     float lon = getGPSLon();
 
     mqttPublish(channelID, rssi, down, up, lat, lon, DEVICE_ID);
-
 }

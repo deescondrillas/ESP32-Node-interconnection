@@ -6,6 +6,35 @@
 const char* DOWNLOAD_URL = "http://10.79.148.74:8080/testfile.bin";
 const char* UPLOAD_URL = "http://10.79.148.74:8080/upload";
 
+// Variables de "entorno" GPS
+static const int RXPin = 16;   // ESP32 pin connected to GPS TX
+static const int TXPin = 17;   // ESP32 pin connected to GPS RX
+static const uint32_t GPSBaud = 9600;
+
+static float latitude = 0.0;
+static float longitude = 0.0;
+
+// GPS setup
+TinyGPSPlus gps;
+HardwareSerial SerialGPS(1);  // Use UART1
+
+//Funciones
+void initGPS() {
+  SerialGPS.begin(GPSBaud, SERIAL_8N1, RXPin, TXPin);
+  Serial.println("GPS initialized on Serial1");
+}
+
+void updateGPS() {
+  while (SerialGPS.available()) {
+    gps.encode(SerialGPS.read());
+  }
+
+  if (gps.location.isValid()) {
+    latitude  = gps.location.lat();
+    longitude = gps.location.lng();
+  }
+}
+
 float getRSSI() {
     return WiFi.RSSI();
 }
@@ -76,11 +105,5 @@ float getThroughputUp() {
     return mbps;
 }
 
-float getGPSLat() {
-    // Fake GPS (Tec de Monterrey Puebla)
-    return 19.0184;
-}
-
-float getGPSLon() {
-    return -98.2421;
-}
+float getGPSLat() { return latitude; }
+float getGPSLon() { return longitude; }

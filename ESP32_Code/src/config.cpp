@@ -1,8 +1,8 @@
 #include "config.h"
 
 // WiFi
-const char* WIFI_SSID     = "CharlyA34";
-const char* WIFI_PASSWORD = "carlos13";
+const char* WIFI_SSID     = "Tec-IoT";
+const char* WIFI_PASSWORD = "spotless.magnetic.bridge";
 
 // MQTT / ThingSpeak
 const char* MQTT_SERVER     = "mqtt3.thingspeak.com";
