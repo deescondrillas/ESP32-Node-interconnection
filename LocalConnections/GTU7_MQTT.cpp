@@ -19,6 +19,7 @@
 #include <HardwareSerial.h>
 #include <Adafruit_GFX.h>
 #include <PubSubClient.h>
+#include <TimeLib.h>
 #include <TinyGPS.h>
 #include <Wire.h>
 
@@ -41,16 +42,15 @@
  */
 
 // Set up the GPS sensor and its variables
-#define COORD_FAILED TinyGPS::GPS_INVALID_F_ANGLE
-#define SAT_FAILED TinyGPS::GPS_INVALID_SATELLITES
+#define NO_SIGNAL TinyGPS::GPS_INVALID_F_ANGLE
 TinyGPS gps;                      // GT-U7 GPS definition
 HardwareSerial SerialGPS(1);      // Create new serial port for GPS
 float latitude{0}, longitude{0};  // Variables for storing the coordinates
 int sat{0}, rx{16}, tx{17};       // Physical serial ports used and satellites
 
 // Variables for storing time
-int year{0};
-byte month{0}, day{0}, hour{0}, minute{0}, second{0}, hundredths{0};
+int _year{0};
+byte _month{0}, _day{0}, _hour{0}, _minute{0}, _second{0}, _hundredths{0};
 
 // Set up the SSD1306 display connected to I2C (SDA, SCL)
 #define SCREEN_WIDTH 128          // OLED display width  (pixels)
@@ -129,6 +129,7 @@ PubSubClient mqttClient(client);
  */
 
 // Definitions
+void gps_read();      // Function to read location from the GPS
 void gps_init();      // Function to initialize GPS (GT-U7)
 void oled_init();     // Function to initialize OLED display
 void serial_gps();    // Function to show GPS data in the serial monitor
@@ -139,6 +140,7 @@ void mqttConnect();                             // Function to connect to MQTT s
 void mqttSubscribe(long);                       // Function to subscribe to ThingSpeak channel for updates
 void mqttPublish(long, String);                 // Function to publish messages to a ThingSpeak channel
 void mqttCallback(char*, byte*, unsigned int);  // Function to handle messages from MQTT subscription to the ThingSpeak broker
+String mqttPrompt();                            // Function to generate the string that tells the pubilsher which data send
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
@@ -186,8 +188,7 @@ void loop() {
     }
 
     // Store data in the corresponding variables
-    gps.f_get_position(&latitude, &longitude);
-    gps.crack_datetime(&year, &month, &day, &hour, &minute, &second, &hundredths);
+    gps_read();
 
     // Show GPS data in the serial monitor
     serial_gps();
@@ -196,7 +197,7 @@ void loop() {
     display_gps();
 
     // MQTT Publish
-    mqttPublish(channelID, (String("field1=")+String(latitude) + String("&field2=")+String(longitude)));
+    mqttPublish(channelID, (mqttPrompt()));
 
     lastUpdate = millis();
   }
@@ -207,6 +208,15 @@ void loop() {
  ▢                                     Functions                                         ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
+
+// Read GPS
+void gps_read() {
+    do {
+      gps.f_get_position(&latitude, &longitude);
+      gps.crack_datetime(&_year, &_month, &_day, &_hour, &_minute, &_second, &_hundredths);
+      if(latitude == NO_SIGNAL) Serial.print("GPS has no signal");
+    } while(latitude == NO_SIGNAL);
+  }
 
 // Initialize GPS
 void gps_init() {
@@ -230,9 +240,6 @@ void oled_init() {
 
 // Show GPS data in the serial monitor
 void serial_gps() {
-  latitude = latitude == COORD_FAILED ? 0 : latitude;
-  longitude = longitude == COORD_FAILED ? 0 : longitude;
-  sat = gps.satellites() == SAT_FAILED ? 0 : gps.satellites();
   Serial.print("\nLat: "); Serial.println(latitude, 8);
   Serial.print("Lon: "); Serial.println(longitude, 8);
   Serial.print("Satellites: "); Serial.println(sat);
@@ -258,15 +265,15 @@ void display_gps() {
   // "Time"
   display.setCursor(0, 24);
   display.print("Time: ");
-  if(hour < 6) display.print(hour + 18);
-  else if(hour < 16) display.print("0");
-  display.print(hour - 6);
+  if(_hour < 6) display.print(_hour + 18);
+  else if(_hour < 16) display.print("0");
+  display.print(_hour - 6);
   display.print(":");
-  if(minute < 10) display.print("0");
-  display.print(minute);
+  if(_minute < 10) display.print("0");
+  display.print(_minute);
   display.print(":");
-  if(second < 10) display.print("0");
-  display.print(second);
+  if(_second < 10) display.print("0");
+  display.print(_second);
 
   display.display();
 }
@@ -274,6 +281,7 @@ void display_gps() {
 // Function to connect to WiFi
 void wifi_connect() {
   if(WiFi.status() == WL_CONNECTED) return;
+  // If not connected
   Serial.println( "Connecting...\n");
   while(WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, pass);
@@ -323,6 +331,17 @@ void mqttCallback( char* topic, byte* payload, unsigned int length ) {
 void mqttPublish(long pubChannelID, String message) {
   String topicString ="channels/" + String( pubChannelID ) + "/publish";
   mqttClient.publish( topicString.c_str(), message.c_str() );
+}
+
+String mqttPrompt() {
+  String query{""};
+  setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
+  // Convert from UTC to UTC-6
+  time_t date = now() - 6 * 3600;
+  query += String("field1=")+String(latitude);
+  query += String("&field2=")+String(longitude);
+  query += String("&field3=")+String(date);
+  return query;
 }
 
 
