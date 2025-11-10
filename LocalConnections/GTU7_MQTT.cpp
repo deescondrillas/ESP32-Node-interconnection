@@ -62,6 +62,7 @@ int updateInterval = 10;          // Sensor readings are published every 10 seco
 long lastUpdate = 0;              // To hold the value of last call of the millis() function
 
 // WiFi set-up variables and credentials
+const int connectionDelay = 3000;                 // Delay between attemps
 const char* ssid = "Tec-IoT";                     // Network name
 const char* pass = "potless.magnetic.bridge";     // Network password
 
@@ -165,7 +166,7 @@ void setup() {
 
 void loop() {
   // Reconnect to WiFi if it gets disconnected.
-  if (WiFi.status() != WL_CONNECTED) wifi_connect();
+  wifi_connect();
 
   // Connect to the MQTT client
   if (!mqttClient.connected()) {
@@ -276,7 +277,7 @@ void wifi_connect() {
   Serial.println( "Connecting...\n");
   while(WiFi.status() != WL_CONNECTED) {
     WiFi.begin(ssid, pass);
-    delay(3000);
+    delay(connectionDelay);
     Serial.println(WiFi.status());
   }
   Serial.println("Connected to Wi-Fi.");
@@ -297,7 +298,7 @@ void mqttConnect() {
       Serial.print( "MQTT connection failed, rc = " );
       Serial.print( mqttClient.state() );
       Serial.println( " Will try the connection again in a few seconds" );
-      delay( connectionDelay*1000 );
+      delay(connectionDelay);
     }
   }
 }
