@@ -336,6 +336,7 @@ void mqttPublish(long pubChannelID, String message) {
 String mqttPrompt() {
   String query{""};
   setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
+  // Convert from UTC to UTC-6
   time_t date = now() - 6 * 3600;
   query += String("field1=")+String(latitude);
   query += String("&field2=")+String(longitude);
