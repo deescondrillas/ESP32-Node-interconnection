@@ -2,8 +2,8 @@
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  ▢ 1) ESP32 reads location and timestamp fron GT-U7 through the digital pins RX0 & TX0   ▢
  ▢ 2) ESP32 sends data to the built-in serial port to the host computer (115200)         ▢
- ▢ 3) ESP32 sends the temperature reading to an attached OLED display (SSD1306) if       ▢
- ▢    avalaible, through the I²C bus: (SDA --> GP21, SCL --> GP22)                       ▢
+ ▢ 3) ESP32 sends the location reading to an attached OLED display (SSD1306) if          ▢
+ ▢    available, through the I²C bus: (SDA --> GP21, SCL --> GP22)                       ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
@@ -336,7 +336,6 @@ void mqttPublish(long pubChannelID, String message) {
 String mqttPrompt() {
   String query{""};
   setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
-  // Convert from UTC to UTC-6
   time_t date = now() - 6 * 3600;
   query += String("field1=")+String(latitude);
   query += String("&field2=")+String(longitude);
