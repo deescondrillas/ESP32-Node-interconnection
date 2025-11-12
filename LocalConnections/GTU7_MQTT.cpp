@@ -22,6 +22,7 @@
 #include <TimeLib.h>
 #include <TinyGPS.h>
 #include <Wire.h>
+#include <math.h>
 
 // Selection between secure and nonsecure connection as it is hardware-dependent
 //#define USESECUREMQTT             // Comment this line if nonsecure connection is used
@@ -58,7 +59,7 @@ byte _month{0}, _day{0}, _hour{0}, _minute{0}, _second{0}, _hundredths{0};
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // Sensor reading and publishing variables
-int updateInterval = 10;          // Sensor readings are published every 10 seconds
+int updateInterval = 1;           // Sensor readings are published every 10 seconds
 long lastUpdate = 0;              // To hold the value of last call of the millis() function
 
 // WiFi set-up variables and credentials
@@ -132,6 +133,7 @@ PubSubClient mqttClient(client);
 void gps_read();      // Function to read location from the GPS
 void gps_init();      // Function to initialize GPS (GT-U7)
 void oled_init();     // Function to initialize OLED display
+void get_meters();    // Function to convert latitude and longitude to meters
 void serial_gps();    // Function to show GPS data in the serial monitor
 void display_gps();   // Function to show GPS data in the OLED display
 void wifi_connect();  // Function to connect the specified WiFi network
@@ -173,7 +175,7 @@ void loop() {
   // Connect to the MQTT client
   if (!mqttClient.connected()) {
     mqttConnect();
-    mqttSubscribe( channelID );
+    mqttSubscribe(channelID);
   }
 
   // Call the loop to maintain connection to the server.
@@ -212,10 +214,16 @@ void loop() {
 // Read GPS
 void gps_read() {
     do {
+      sat = gps.satellites();
       gps.f_get_position(&latitude, &longitude);
       gps.crack_datetime(&_year, &_month, &_day, &_hour, &_minute, &_second, &_hundredths);
-      if(latitude == NO_SIGNAL) Serial.print("GPS has no signal");
+      if(latitude == NO_SIGNAL) {
+        Serial.print("GPS has no signal\n");
+        delay(connectionDelay);
+      }
     } while(latitude == NO_SIGNAL);
+    // Convert to meters
+    get_meters();
   }
 
 // Initialize GPS
@@ -240,8 +248,8 @@ void oled_init() {
 
 // Show GPS data in the serial monitor
 void serial_gps() {
-  Serial.print("\nLat: "); Serial.println(latitude, 8);
-  Serial.print("Lon: "); Serial.println(longitude, 8);
+  Serial.print("\nLat: "); Serial.println(latitude, 5);
+  Serial.print("Lon: "); Serial.println(longitude, 5);
   Serial.print("Satellites: "); Serial.println(sat);
 }
 
@@ -254,14 +262,12 @@ void display_gps() {
   display.setCursor(0,0);
   display.print("Latitude: ");
   display.print(latitude);
-  display.cp437(true);
-  display.write(167);
+  display.print(" m");
   // "Longitude"
   display.setCursor(0, 12);
   display.print("Longitude: ");
   display.print(longitude);
-  display.cp437(true);
-  display.write(167);
+  display.print(" m");
   // "Time"
   display.setCursor(0, 24);
   display.print("Time: ");
@@ -333,6 +339,7 @@ void mqttPublish(long pubChannelID, String message) {
   mqttClient.publish( topicString.c_str(), message.c_str() );
 }
 
+// Function to make the string that is passed as the MGTT prompt
 String mqttPrompt() {
   String query{""};
   setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
@@ -343,6 +350,28 @@ String mqttPrompt() {
   return query;
 }
 
+// Function to convert latitude and longitude into meters
+void get_meters() {
+  const double refLat = 19.01800;   // Reference latitude in degrees
+  const double refLon = -98.24200;  // Reference longitude in degrees
+
+  // Conversion constants
+  const double m_per_deg_lat = 111132.0;                          // meters per degree latitude
+  double m_per_deg_lon = 111320.0 * cos(refLat * (M_PI / 180.0)); // meters per degree longitude at refLat
+
+  // Compute deltas in degrees
+  double dLat = latitude  - refLat;
+  double dLon = longitude - refLon;
+
+  // Convert to meters relative to reference
+  double north_m = dLat * m_per_deg_lat;
+  double east_m  = dLon * m_per_deg_lon;
+
+  // Overwrite global variables (latitude = north, longitude = east)
+  latitude  = (float)north_m;
+  longitude = (float)east_m;
+  return;
+}
 
 // GT-U7
 // 161213972
