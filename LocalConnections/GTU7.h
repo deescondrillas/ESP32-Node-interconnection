@@ -1,6 +1,6 @@
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢ 1) ESP32 reads location and timestamp fron GT-U7 through the digital pins RX0 & TX0   ▢
+ ▢ 1) ESP32 reads location and timestamp fron GT-U7 through the digital pins 16 & 17     ▢
  ▢ 2) ESP32 sends data to the built-in serial port to the host computer (115200)         ▢
  ▢ 3) ESP32 sends the location reading to an attached OLED display (SSD1306) if          ▢
  ▢    available, through the I²C bus: (SDA --> GP21, SCL --> GP22)                       ▢
@@ -15,7 +15,6 @@
  */
 
 #include <Adafruit_SSD1306.h>
-#include <HardwareSerial.h>
 #include <PubSubClient.h>
 #include <TinyGPSPlus.h>
 #include <TimeLib.h>
@@ -29,50 +28,47 @@
  */
 
 // Set up the GPS sensor and its variables
-TinyGPSPlus gps;                  // GT-U7 GPS definition
-HardwareSerial SerialGPS(1);      // Create new serial port for GPS
-float latitude{0}, longitude{0};  // Variables for storing the coordinates
-int sat{0}, rx{16}, tx{17};       // Physical serial ports used and satellites
+TinyGPSPlus gps;                    // GT-U7 GPS definition
+HardwareSerial SerialGPS(1);        // Create new serial port for GPS
+float latitude{0}, longitude{0};    // Variables for storing the coordinates
+int sat{0}, rx{16}, tx{17};         // Physical serial ports used and satellites
 
 // Spacial reference variables
 const double EARTH_RADIUS = 6371000.0;                  // Earth radius in meters
 const double ONE_DEG = EARTH_RADIUS * 2 * M_PI / 360;   // One rotation degree in meters
-const double REF_LAT = 19.01620;  // Reference latitude in degrees
-const double REF_LON = -98.24581; // Reference longitude in degrees
+const double REF_LAT = 19.01620;    // Reference latitude in degrees
+const double REF_LON = -98.24581;   // Reference longitude in degrees
 
 // Variables for storing time
 int yy{0}, mm{0}, dd{0}, hs{0}, mins{0}, secs{0};
 
 // Set up the SSD1306 display connected to I2C (SDA, SCL)
-#define SCREEN_WIDTH 128          // OLED display width  (pixels)
-#define SCREEN_HEIGHT 32          // OLED display height (pixels)
+#define SCREEN_WIDTH 128            // OLED display width  (pixels)
+#define SCREEN_HEIGHT 32            // OLED display height (pixels)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // Sensor printing and publishing intervals
-int delayPub{10}, delayPrint{3};  // Sensor readings are published every 10 seconds and printed every 3
-long lastPub{0}, lastPrint{0};    // To hold the value of last call of the millis() function
+int delayPub{10}, delayPrint{3};    // Sensor readings are published every 10 seconds and printed every 3
+long lastPub{0}, lastPrint{0};      // To hold the value of last call of the millis() function
 
 // WiFi set-up variables and credentials
-const int connectionDelay = 3;                    // Delay between attemps
-const char* ssid = "Tec-IoT";                     // Network name
-const char* pass = "spotless.magnetic.bridge";    // Network password
+const int connectionDelay = 3;                  // Delay between attemps
+const char* ssid = "Tec-IoT";                   // Network name
+const char* pass = "spotless.magnetic.bridge";  // Network password
 
 // Channel ID defined in the ThinkSpeak account. Up to eight fields per channel
-#define channelID 3150934         // Holds three fields: La, Lo & Time
+#define channelID 3150934           // Holds three fields: Lat, Lon & Time
 #define mqttPort 1883
 WiFiClient client;
 
 // ThinkSpeak credentials – account and the defined channels
-const char* mqttUserName   = "FSIPNTozNBIMIzMSDAUfDj0";
-const char* clientID       = "FSIPNTozNBIMIzMSDAUfDj0";
-const char* mqttPass       = "AxH7xNM6mYufHIcV8B59V7gN";
+const char* mqttUserName = "FSIPNTozNBIMIzMSDAUfDj0";
+const char* clientID     = "FSIPNTozNBIMIzMSDAUfDj0";
+const char* mqttPass     = "AxH7xNM6mYufHIcV8B59V7gN";
 
 // MQTT broker server
 const char* server = "mqtt3.thingspeak.com";
-
-// The MQTT client is liked to the wifi connection
 PubSubClient mqttClient(client);
-
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
@@ -81,18 +77,19 @@ PubSubClient mqttClient(client);
  */
 
  // Definitions
- void gps_read();      // Function to read location from the GPS
- void gps_init();      // Function to initialize GPS (GT-U7)
- void oled_init();     // Function to initialize OLED display
- void get_meters();    // Function to convert latitude and longitude to meters
- void serial_gps();    // Function to show GPS data in the serial monitor
- void display_gps();   // Function to show GPS data in the OLED display
+ void gps_read();                                   // Function to read location from the GPS
+ void gps_init();                                   // Function to initialize GPS (GT-U7)
+ void oled_init();                                  // Function to initialize OLED display
+ void get_meters();                                 // Function to convert latitude and longitude to meters
+ void serial_gps();                                 // Function to show GPS data in the serial monitor
+ void display_gps();                                // Function to show GPS data in the OLED display
  void wifi_connect();                               // Function to connect the specified WiFi network
 
- void mqttConnect();                             // Function to connect to MQTT server, i.e., mqtt3.thingspeak.com
- void mqttPublish(long);                         // Function to publish messages to a ThingSpeak channel
- void mqttSubscribe(long);                       // Function to subscribe to ThingSpeak channel for updates
- void mqttCallback(char*, byte*, unsigned int);  // Function to handle messages from MQTT subscription to the ThingSpeak broker
+ void mqtt_init();                                   // Function to configure the MQTT client to connect with ThingSpeak and handle messages
+ void mqtt_connect();                                // Function to connect to MQTT server, i.e., mqtt3.thingspeak.com
+ void mqtt_publish(long);                            // Function to publish messages to a ThingSpeak channel
+ void mqtt_subscribe(long);                          // Function to subscribe to ThingSpeak channel for updates
+ void mqtt_callback(char*, byte*, unsigned int);     // Function to handle messages from MQTT subscription to the ThingSpeak broker
 
 
 // Read GPS
@@ -218,8 +215,15 @@ void wifi_connect() {
     Serial.println("Connected to Wi-Fi.");
 }
 
+// Function to configure the MQTT client to connect with ThingSpeak and handle messages
+void mqtt_init() {
+    mqttClient.setServer(server, mqttPort);
+    mqttClient.setCallback(mqtt_callback);
+    mqttClient.setBufferSize(2048);
+}
+
 // Function to connect to MQTT server
-void mqttConnect() {
+void mqtt_connect() {
   // Loop until the client is connected to the server
   while (!mqttClient.connected()) {
 
@@ -239,16 +243,18 @@ void mqttConnect() {
       delay(connectionDelay * 1000);
     }
   }
+  // Subscribe channel
+  mqtt_subscribe(channelID);
 }
 
 // Function to subscribe to ThingSpeak channel for updates
-void mqttSubscribe(long subChannelID) {
+void mqtt_subscribe(long subChannelID) {
   String myTopic = "channels/" + String(subChannelID) + "/subscribe";
   mqttClient.subscribe(myTopic.c_str());
 }
 
 // Function to handle messages from MQTT subscription to the ThingSpeak broker
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
+void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // Print the message details that was received to the serial monitor
   Serial.print("Message arrived from ThinksSpeak broker [");
   Serial.print(topic);
@@ -258,7 +264,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 // Function to make the string that is passed as the MGTT prompt
-void mqttPublish(long pubChannelID) {
+void mqtt_publish(long pubChannelID) {
     if(millis() - lastPub > 1000 * delayPub) {
         lastPub = millis();
 
