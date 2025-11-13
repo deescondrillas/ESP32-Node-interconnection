@@ -50,7 +50,7 @@ float latitude{0}, longitude{0};  // Variables for storing the coordinates
 int sat{0}, rx{16}, tx{17};       // Physical serial ports used and satellites
 
 // Spacial reference variables
-const double EARTH_RADIUS = 6'371'000.0         // Earth radius in meters
+const double EARTH_RADIUS = 6'371'000.0;        // Earth radius in meters
 const double REF_LAT = 19.01620;  // Reference latitude in degrees
 const double REF_LON = -98.24581; // Reference longitude in degrees
 
@@ -144,8 +144,8 @@ void display_gps();   // Function to show GPS data in the OLED display
 void wifi_connect();  // Function to connect the specified WiFi network
 
 void mqttConnect();                             // Function to connect to MQTT server, i.e., mqtt3.thingspeak.com
+void mqttPublish(long);                         // Function to publish messages to a ThingSpeak channel
 void mqttSubscribe(long);                       // Function to subscribe to ThingSpeak channel for updates
-void mqttPublish(long, String);                 // Function to publish messages to a ThingSpeak channel
 void mqttCallback(char*, byte*, unsigned int);  // Function to handle messages from MQTT subscription to the ThingSpeak broker
 
 /*
@@ -360,7 +360,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 // Function to make the string that is passed as the MGTT prompt
-String mqttPublish(long pubChannelID) {
+void mqttPublish(long pubChannelID) {
     // Set the time using the GPS variables and adjust to UTC-6
     setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
     time_t date = now() - 6 * 3600;
@@ -375,13 +375,13 @@ String mqttPublish(long pubChannelID) {
     String topicString ="channels/" + String(pubChannelID) + "/publish";
 
     // Publish data
-    mqttClient.publish(topicString.c_str(), message.c_str());
+    mqttClient.publish(topicString.c_str(), query.c_str());
 }
 
 // Function to convert latitude and longitude into meters
 void get_meters() {
     // Conversion constants
-    const double m_per_deg_lat = EARTH_RADIUS / 360                                   // meters per degree latitude
+    const double m_per_deg_lat = EARTH_RADIUS / 360;                                  // meters per degree latitude
     const double m_per_deg_lon = EARTH_RADIUS / 360 * cos(REF_LAT * (M_PI / 180.0));  // meters per degree longitude at refLat
 
     // Differences in degrees
