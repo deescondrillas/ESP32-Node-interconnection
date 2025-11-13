@@ -14,18 +14,13 @@
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
-
 #include <Adafruit_SSD1306.h>
-#include <Adafruit_Sensor.h>
 #include <HardwareSerial.h>
-#include <Adafruit_GFX.h>
 #include <PubSubClient.h>
 #include <TinyGPSPlus.h>
 #include <TimeLib.h>
-#include <Wire.h>
 #include <math.h>
 #include <WiFi.h>
-
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
@@ -53,12 +48,12 @@ int yy{0}, mm{0}, dd{0}, hs{0}, mins{0}, secs{0};
 #define SCREEN_HEIGHT 32          // OLED display height (pixels)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// Sensor reading and publishing variables
-int updateInterval = 10;          // Sensor readings are published every 10 seconds
-long lastUpdate = 0;              // To hold the value of last call of the millis() function
+// Sensor printing and publishing intervals
+int delayPub{10}, delayPrint{3};  // Sensor readings are published every 10 seconds and printed every 3
+long lastPub{0}, lastPrint{0};    // To hold the value of last call of the millis() function
 
 // WiFi set-up variables and credentials
-const int connectionDelay = 3000;                 // Delay between attemps
+const int connectionDelay = 3;                    // Delay between attemps
 const char* ssid = "Tec-IoT";                     // Network name
 const char* pass = "spotless.magnetic.bridge";    // Network password
 
@@ -92,12 +87,13 @@ PubSubClient mqttClient(client);
  void get_meters();    // Function to convert latitude and longitude to meters
  void serial_gps();    // Function to show GPS data in the serial monitor
  void display_gps();   // Function to show GPS data in the OLED display
- void wifi_connect();  // Function to connect the specified WiFi network
+ void wifi_connect();                               // Function to connect the specified WiFi network
 
  void mqttConnect();                             // Function to connect to MQTT server, i.e., mqtt3.thingspeak.com
  void mqttPublish(long);                         // Function to publish messages to a ThingSpeak channel
  void mqttSubscribe(long);                       // Function to subscribe to ThingSpeak channel for updates
  void mqttCallback(char*, byte*, unsigned int);  // Function to handle messages from MQTT subscription to the ThingSpeak broker
+
 
 // Read GPS
 void gps_read() {
@@ -122,7 +118,7 @@ void gps_read() {
         // Check connection
         if(!gps.location.isValid()) {
         Serial.print("GPS has no signal\n");
-        delay(connectionDelay);
+        delay(connectionDelay * 1000);
         }
 
     // Repeat while not connected
@@ -157,9 +153,12 @@ void oled_init() {
 
 // Show GPS data in the serial monitor
 void serial_gps() {
-    Serial.print("\nLat: "); Serial.println(latitude, 5);
-    Serial.print("Lon: "); Serial.println(longitude, 5);
-    Serial.print("Satellites: "); Serial.println(sat);
+    if(millis() - lastPrint > 1000 * delayPrint) {
+        lastPrint = millis();
+        Serial.print("\nLat: "); Serial.println(latitude, 5);
+        Serial.print("Lon: "); Serial.println(longitude, 5);
+        Serial.print("Satellites: "); Serial.println(sat);
+    }
 }
 
 // Show GPS data in OLED display
@@ -186,8 +185,10 @@ void display_gps() {
 
     // Hour
     if(hs < 6) display.print(hs + 18);
-    else if(hs < 16) display.print("0");
-    display.print(hs - 6);
+    else {
+        if(hs < 16) display.print("0");
+        display.print(hs - 6);
+    }
     display.print(":");
 
     // Minute
@@ -211,7 +212,7 @@ void wifi_connect() {
     Serial.println( "Connecting...\n");
     while(WiFi.status() != WL_CONNECTED) {
         WiFi.begin(ssid, pass);
-        delay(connectionDelay);
+        delay(connectionDelay * 1000);
         Serial.println(WiFi.status());
     }
     Serial.println("Connected to Wi-Fi.");
@@ -235,7 +236,7 @@ void mqttConnect() {
       Serial.print("MQTT connection failed, rc = ");
       Serial.print(mqttClient.state());
       Serial.println(" Will try the connection again in a few seconds");
-      delay(connectionDelay);
+      delay(connectionDelay * 1000);
     }
   }
 }
@@ -258,28 +259,32 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 // Function to make the string that is passed as the MGTT prompt
 void mqttPublish(long pubChannelID) {
-    // Set the time using the GPS variables and adjust to UTC-6
-    setTime(hs, mins, secs, dd, mm, yy);
-    time_t date = now() - 6 * 3600;
+    if(millis() - lastPub > 1000 * delayPub) {
+        lastPub = millis();
 
-    // Create a query with the MQTT prompt
-    String query{""};
-    query += String("field1=") + String(latitude);
-    query += String("&field2=") + String(longitude);
-    query += String("&field3=") + String(date);
+        // Set the time using the GPS variables and adjust to UTC-6
+        setTime(hs, mins, secs, dd, mm, yy);
+        time_t date = now() - 6 * 3600;
 
-    // Create a string with channel ID
-    String topicString ="channels/" + String(pubChannelID) + "/publish";
+        // Create a query with the MQTT prompt
+        String query{""};
+        query += String("field1=") + String(latitude);
+        query += String("&field2=") + String(longitude);
+        query += String("&field3=") + String(date);
 
-    // Publish data
-    mqttClient.publish(topicString.c_str(), query.c_str());
+        // Create a string with channel ID
+        String topicString ="channels/" + String(pubChannelID) + "/publish";
+
+        // Publish data
+        mqttClient.publish(topicString.c_str(), query.c_str());
+    }
 }
 
 // Function to convert latitude and longitude into meters
 void get_meters() {
     // Conversion constants
-    const double m_per_deg_lat = EARTH_RADIUS / 360;                                  // meters per degree latitude
-    const double m_per_deg_lon = EARTH_RADIUS / 360 * cos(REF_LAT * (M_PI / 180.0));  // meters per degree longitude at refLat
+    const double m_per_deg_lat = ONE_DEG;                                  // meters per degree latitude
+    const double m_per_deg_lon = ONE_DEG * cos(REF_LAT * (M_PI / 180.0));  // meters per degree longitude at refLat
 
     // Differences in degrees
     double dLat = latitude  - REF_LAT;
@@ -292,60 +297,4 @@ void get_meters() {
     // Overwrite global variables
     latitude  = (float)north_m;
     longitude = (float)east_m;
-}
-
-
-/*
- ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢                                        Main                                           ▢
- ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- */
-
-
-void setup() {
-  Serial.begin(115200);   // Initialize serial monitor
-  gps_init();             // Initialize GPS
-  oled_init();            // Initialize the OLED display
-  wifi_connect();         // Connect to WiFi
-
-  // Configure the MQTT client to connect with ThingSpeak broker and properly handle messages
-  mqttClient.setServer(server, mqttPort);
-  mqttClient.setCallback(mqttCallback);
-  mqttClient.setBufferSize(2048);
-
-  // Use secure MQTT connections if defined.
-  #ifdef USESECUREMQTT
-      client.setCACert(thingspeak_ca_cert);
-  #endif
-}
-
-
-void loop() {
-  // Reconnect to WiFi if it gets disconnected.
-  wifi_connect();
-
-  // Connect to the MQTT client
-  if (!mqttClient.connected()) {
-    mqttConnect();
-    mqttSubscribe(channelID);
-  }
-
-  // Call the loop to maintain connection to the server.
-  mqttClient.loop();
-
-  // Store data in the corresponding variables
-  gps_read();
-
-  // Show GPS data in the serial monitor
-  serial_gps();
-
-  // Show GPS data in OLED display
-  display_gps();
-
-  // Main read-publish loop
-  if(millis() - lastUpdate > 1000 * updateInterval) {
-    lastUpdate = millis();
-    // MQTT Publish
-    mqttPublish(channelID);
-  }
 }
