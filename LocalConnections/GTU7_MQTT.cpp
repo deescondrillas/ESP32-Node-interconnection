@@ -43,11 +43,16 @@
  */
 
 // Set up the GPS sensor and its variables
-#define NO_SIGNAL TinyGPS::GPS_INVALID_F_ANGLE
+#define NO_SIGNAL TinyGPS::GPS_INVALID_F_ANGLE  //GPS no-reading code
 TinyGPS gps;                      // GT-U7 GPS definition
 HardwareSerial SerialGPS(1);      // Create new serial port for GPS
 float latitude{0}, longitude{0};  // Variables for storing the coordinates
 int sat{0}, rx{16}, tx{17};       // Physical serial ports used and satellites
+
+// Spacial reference variables
+const double EARTH_RADIUS = 6'371'000.0         // Earth radius in meters
+const double REF_LAT = 19.01620;  // Reference latitude in degrees
+const double REF_LON = -98.24581; // Reference longitude in degrees
 
 // Variables for storing time
 int _year{0};
@@ -142,7 +147,6 @@ void mqttConnect();                             // Function to connect to MQTT s
 void mqttSubscribe(long);                       // Function to subscribe to ThingSpeak channel for updates
 void mqttPublish(long, String);                 // Function to publish messages to a ThingSpeak channel
 void mqttCallback(char*, byte*, unsigned int);  // Function to handle messages from MQTT subscription to the ThingSpeak broker
-String mqttPrompt();                            // Function to generate the string that tells the pubilsher which data send
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
@@ -181,27 +185,20 @@ void loop() {
   // Call the loop to maintain connection to the server.
   mqttClient.loop();
 
+  // Store data in the corresponding variables
+  gps_read();
+
+  // Show GPS data in the serial monitor
+  serial_gps();
+
+  // Show GPS data in OLED display
+  display_gps();
+
   // Main read-publish loop
   if(millis() - lastUpdate > 1000 * updateInterval) {
-    // Read data from GPS
-    while(SerialGPS.available()) {
-      char c = SerialGPS.read();
-      gps.encode(c);
-    }
-
-    // Store data in the corresponding variables
-    gps_read();
-
-    // Show GPS data in the serial monitor
-    serial_gps();
-
-    // Show GPS data in OLED display
-    display_gps();
-
-    // MQTT Publish
-    mqttPublish(channelID, (mqttPrompt()));
-
     lastUpdate = millis();
+    // MQTT Publish
+    mqttPublish(channelID);
   }
 }
 
@@ -214,117 +211,146 @@ void loop() {
 // Read GPS
 void gps_read() {
     do {
-      sat = gps.satellites();
-      gps.f_get_position(&latitude, &longitude);
-      gps.crack_datetime(&_year, &_month, &_day, &_hour, &_minute, &_second, &_hundredths);
-      if(latitude == NO_SIGNAL) {
+        // Read data from GPS
+        while(SerialGPS.available()) {
+            char c = SerialGPS.read();
+            gps.encode(c);
+        }
+
+        // Store data
+        sat = gps.satellites();
+        gps.f_get_position(&latitude, &longitude);
+        gps.crack_datetime(&_year, &_month, &_day, &_hour, &_minute, &_second, &_hundredths);
+
+        // Check connection
+        if(latitude == NO_SIGNAL) {
         Serial.print("GPS has no signal\n");
         delay(connectionDelay);
-      }
+        }
+
+    // Repeat while not connected
     } while(latitude == NO_SIGNAL);
+
     // Convert to meters
     get_meters();
-  }
+}
 
 // Initialize GPS
 void gps_init() {
-  delay(1500);
-  SerialGPS.begin(9600, SERIAL_8N1, tx, rx);
-  Serial.println("\nInitializing GPS...");
-  while(SerialGPS.available()) SerialGPS.read();
-  delay(500);
+    delay(1500);
+    Serial.println("\nInitializing GPS...");
+    SerialGPS.begin(9600, SERIAL_8N1, tx, rx);
+    while(SerialGPS.available()) SerialGPS.read();
+    delay(500);
 }
 
 // Initialize the OLED display
 void oled_init() {
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
-  delay(2000);
-  display.clearDisplay();
-  display.setTextColor(WHITE);
+    // Check status
+    if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        Serial.println(F("SSD1306 allocation failed"));
+        for(;;);
+    }
+
+    // Reinitialize display
+    delay(2000);
+    display.clearDisplay();
+    display.setTextColor(WHITE);
 }
 
 // Show GPS data in the serial monitor
 void serial_gps() {
-  Serial.print("\nLat: "); Serial.println(latitude, 5);
-  Serial.print("Lon: "); Serial.println(longitude, 5);
-  Serial.print("Satellites: "); Serial.println(sat);
+    Serial.print("\nLat: "); Serial.println(latitude, 5);
+    Serial.print("Lon: "); Serial.println(longitude, 5);
+    Serial.print("Satellites: "); Serial.println(sat);
 }
 
 // Show GPS data in OLED display
 void display_gps() {
-  // Clear
-  display.clearDisplay();
-  display.setTextSize(1);
-  // "Latitude"
-  display.setCursor(0,0);
-  display.print("Latitude: ");
-  display.print(latitude);
-  display.print(" m");
-  // "Longitude"
-  display.setCursor(0, 12);
-  display.print("Longitude: ");
-  display.print(longitude);
-  display.print(" m");
-  // "Time"
-  display.setCursor(0, 24);
-  display.print("Time: ");
-  if(_hour < 6) display.print(_hour + 18);
-  else if(_hour < 16) display.print("0");
-  display.print(_hour - 6);
-  display.print(":");
-  if(_minute < 10) display.print("0");
-  display.print(_minute);
-  display.print(":");
-  if(_second < 10) display.print("0");
-  display.print(_second);
+    // Clear
+    display.clearDisplay();
+    display.setTextSize(1);
 
-  display.display();
+    // "Latitude"
+    display.setCursor(0,0);
+    display.print("Latitude: ");
+    display.print(latitude);
+    display.print(" m");
+
+    // "Longitude"
+    display.setCursor(0, 12);
+    display.print("Longitude: ");
+    display.print(longitude);
+    display.print(" m");
+
+    // "Time"
+    display.setCursor(0, 24);
+    display.print("Time: ");
+
+    // Hour
+    if(_hour < 6) display.print(_hour + 18);
+    else if(_hour < 16) display.print("0");
+    display.print(_hour - 6);
+    display.print(":");
+
+    // Minute
+    if(_minute < 10) display.print("0");
+    display.print(_minute);
+    display.print(":");
+
+    // Second
+    if(_second < 10) display.print("0");
+    display.print(_second);
+
+    display.display();
 }
 
 // Function to connect to WiFi
 void wifi_connect() {
-  if(WiFi.status() == WL_CONNECTED) return;
-  // If not connected
-  Serial.println( "Connecting...\n");
-  while(WiFi.status() != WL_CONNECTED) {
-    WiFi.begin(ssid, pass);
-    delay(connectionDelay);
-    Serial.println(WiFi.status());
-  }
-  Serial.println("Connected to Wi-Fi.");
+    // Check connection
+    if(WiFi.status() == WL_CONNECTED) return;
+
+    // Reconnect
+    Serial.println( "Connecting...\n");
+    while(WiFi.status() != WL_CONNECTED) {
+        WiFi.begin(ssid, pass);
+        delay(connectionDelay);
+        Serial.println(WiFi.status());
+    }
+    Serial.println("Connected to Wi-Fi.");
 }
 
 // Function to connect to MQTT server
 void mqttConnect() {
   // Loop until the client is connected to the server
   while (!mqttClient.connected()) {
-    // Connect to the MQTT broker
+
+    // Connection succeed
     if(mqttClient.connect(clientID, mqttUserName, mqttPass)) {
-      Serial.print( "MQTT to " );
-      Serial.print( server );
+      Serial.print("MQTT to ");
+      Serial.print(server);
       Serial.print (" at port ");
-      Serial.print( mqttPort );
-      Serial.println( " successful." );
+      Serial.print(mqttPort);
+      Serial.println(" successful.");
+
+    // Connection fail
     } else {
-      Serial.print( "MQTT connection failed, rc = " );
-      Serial.print( mqttClient.state() );
-      Serial.println( " Will try the connection again in a few seconds" );
+      Serial.print("MQTT connection failed, rc = ");
+      Serial.print(mqttClient.state());
+      Serial.println(" Will try the connection again in a few seconds");
       delay(connectionDelay);
     }
   }
 }
 
 // Function to subscribe to ThingSpeak channel for updates
-void mqttSubscribe( long subChannelID ) {
-  String myTopic = "channels/"+String( subChannelID )+"/subscribe";
+void mqttSubscribe(long subChannelID) {
+  String myTopic = "channels/" + String(subChannelID) + "/subscribe";
   mqttClient.subscribe(myTopic.c_str());
 }
 
 // Function to handle messages from MQTT subscription to the ThingSpeak broker
-void mqttCallback( char* topic, byte* payload, unsigned int length ) {
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Print the message details that was received to the serial monitor
   Serial.print("Message arrived from ThinksSpeak broker [");
   Serial.print(topic);
@@ -333,44 +359,42 @@ void mqttCallback( char* topic, byte* payload, unsigned int length ) {
   Serial.println();
 }
 
-// Function to publish messages to a ThingSpeak channel
-void mqttPublish(long pubChannelID, String message) {
-  String topicString ="channels/" + String( pubChannelID ) + "/publish";
-  mqttClient.publish( topicString.c_str(), message.c_str() );
-}
-
 // Function to make the string that is passed as the MGTT prompt
-String mqttPrompt() {
-  String query{""};
-  setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
-  time_t date = now() - 6 * 3600;
-  query += String("field1=")+String(latitude);
-  query += String("&field2=")+String(longitude);
-  query += String("&field3=")+String(date);
-  return query;
+String mqttPublish(long pubChannelID) {
+    // Set the time using the GPS variables and adjust to UTC-6
+    setTime((int)_hour, (int)_minute, (int)_second, (int)_day, (int)_month, (int)_year);
+    time_t date = now() - 6 * 3600;
+
+    // Create a query with the MQTT prompt
+    String query{""};
+    query += String("field1=") + String(latitude);
+    query += String("&field2=") + String(longitude);
+    query += String("&field3=") + String(date);
+
+    // Create a string with channel ID
+    String topicString ="channels/" + String(pubChannelID) + "/publish";
+
+    // Publish data
+    mqttClient.publish(topicString.c_str(), message.c_str());
 }
 
 // Function to convert latitude and longitude into meters
 void get_meters() {
-  const double refLat = 19.01800;   // Reference latitude in degrees
-  const double refLon = -98.24200;  // Reference longitude in degrees
+    // Conversion constants
+    const double m_per_deg_lat = EARTH_RADIUS / 360                                   // meters per degree latitude
+    const double m_per_deg_lon = EARTH_RADIUS / 360 * cos(REF_LAT * (M_PI / 180.0));  // meters per degree longitude at refLat
 
-  // Conversion constants
-  const double m_per_deg_lat = 111132.0;                          // meters per degree latitude
-  double m_per_deg_lon = 111320.0 * cos(refLat * (M_PI / 180.0)); // meters per degree longitude at refLat
+    // Differences in degrees
+    double dLat = latitude  - REF_LAT;
+    double dLon = longitude - REF_LON;
 
-  // Compute deltas in degrees
-  double dLat = latitude  - refLat;
-  double dLon = longitude - refLon;
+    // Conversion to meters
+    double north_m = dLat * m_per_deg_lat;
+    double east_m  = dLon * m_per_deg_lon;
 
-  // Convert to meters relative to reference
-  double north_m = dLat * m_per_deg_lat;
-  double east_m  = dLon * m_per_deg_lon;
-
-  // Overwrite global variables (latitude = north, longitude = east)
-  latitude  = (float)north_m;
-  longitude = (float)east_m;
-  return;
+    // Overwrite global variables
+    latitude  = (float)north_m;
+    longitude = (float)east_m;
 }
 
 // GT-U7
