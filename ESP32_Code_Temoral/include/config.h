@@ -1,23 +1,21 @@
 #pragma once
 #include <Arduino.h>
 
-// WiFi Configuration
+// WiFi
 extern const char* WIFI_SSID;
 extern const char* WIFI_PASSWORD;
 
-// ThingSpeak MQTT Configuration
+// MQTT
 extern const char* MQTT_SERVER;
 extern const int   MQTT_PORT;
 extern const char* MQTT_USER;
 extern const char* MQTT_PASS;
 extern const char* MQTT_CLIENT_ID;
-extern const char* THINGSPEAK_TOPIC;
 
-// Device Identification
+// Device
 extern const String DEVICE_ID;
+extern const long channelID;
 
-// Timings
+// Timing
 extern const unsigned long SEND_INTERVAL;
 
-// Channel ID
-#define channelID 3150959
