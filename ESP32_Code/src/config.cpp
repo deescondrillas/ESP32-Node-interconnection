@@ -5,11 +5,10 @@ const char* WIFI_SSID     = "Tec-IoT";
 const char* WIFI_PASSWORD = "spotless.magnetic.bridge";
 
 // MQTT / ThingSpeak
-const char* MQTT_SERVER     = "mqtt3.thingspeak.com";
-const int   MQTT_PORT       = 1883;  // non-secure for now
-const char* MQTT_USER       = "JQs9ByoEBi0RBSMtCxgRBwI";
-const char* MQTT_CLIENT_ID  = "JQs9ByoEBi0RBSMtCxgRBwI";
-const char* MQTT_PASS       = "LPvMo6GgwXSs3JO4apF49akX";
+const char* MQTT_SERVER     = "192.168.x.x";   // IP de tu laptop
+const char* MQTT_USER       = "";
+const char* MQTT_CLIENT_ID  = "";
+const char* MQTT_PASS       = "";
 
 
 // Device ID
