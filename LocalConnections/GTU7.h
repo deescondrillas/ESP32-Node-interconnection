@@ -1,16 +1,16 @@
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢ 1) ESP32 reads location and timestamp fron GT-U7 through the digital pins 16 & 17     ▢
- ▢ 2) ESP32 sends data to the built-in serial port to the host computer (115200)         ▢
- ▢ 3) ESP32 sends the location reading to an attached OLED display (SSD1306) if          ▢
- ▢    available, through the I²C bus: (SDA --> GP21, SCL --> GP22)                       ▢
- ▢ 4) The read data is packed into a MQTT package and send to the broker (ThingSpeak)    ▢
+ ▢ 1) ESP32 reads location and timestamp fron GT-U7 through the digital pins 16 & 17    ▢
+ ▢ 2) ESP32 sends data to the built-in serial port to the host computer (115200)        ▢
+ ▢ 3) ESP32 sends the location reading to an attached OLED display (SSD1306) if         ▢
+ ▢    available, through the I²C bus: (SDA --> GP21, SCL --> GP22)                      ▢
+ ▢ 4) The read data is packed into a MQTT package and send to the broker (ThingSpeak)   ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢                                      Libraries                                        ▢
+ ▢                                      Libraries                                       ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
@@ -23,7 +23,7 @@
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢                               Variables and Definitions                               ▢
+ ▢                               Variables and Definitions                              ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
@@ -72,7 +72,7 @@ PubSubClient mqttClient(client);
 
 /*
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
- ▢                                     Functions                                         ▢
+ ▢                                     Functions                                        ▢
  ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢ ▢
  */
 
