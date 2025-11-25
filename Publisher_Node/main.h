@@ -15,10 +15,6 @@
  *                GLOBAL VARIABLES
  ***********************************************/
 
-// -------- WiFi test servers --------
-const char* DOWNLOAD_URL = "http://10.50.77.144:8080/testfile.bin";
-const char* UPLOAD_URL   = "http://10.50.77.144:8080/upload";
-
 // -------- GPS --------
 TinyGPSPlus gps;                    // GT-U7 GPS definition
 HardwareSerial SerialGPS(1);        // Create new serial port for GPS
@@ -163,7 +159,7 @@ float getThroughputUp() {
     //Converts to Mbps
     float bits = uploadSize * 8.0;
     float seconds = duration / 1000.0;
-    float mbps = (bits / seconds) / 1e6;
+    float mbps = (bits / seconds) / 1e3;
 
     Serial.printf("Upload: %.2f Mbps (%d bytes in %lu ms)\n", mbps, uploadSize, duration);
     return mbps;
@@ -201,7 +197,7 @@ void gps_read() {
         //Check connection
         if (!gps.location.isValid()) {
             Serial.println("GPS no signal...");
-            delay(2000);
+            delay(3000);
         }
     //Repeat while not connected
     } while (!gps.location.isValid());
@@ -299,16 +295,15 @@ void publishData() {
  ***********************************************/
 void app_setup() {
     Serial.begin(115200);
-    delay(500);
-    connectWiFi();
     gps_init();
+    connectWiFi();
     setupMQTT();
     Serial.println("System Ready.");
 }
 
 void app_loop() {
     loopMQTT();
+    gps_read();
     serial_gps();
-
     publishData();
 }
