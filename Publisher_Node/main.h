@@ -1,13 +1,13 @@
 #pragma once
 
-#include <WiFi.h>
-#include <HTTPClient.h>
+#include <Adafruit_SSD1306.h>
 #include <PubSubClient.h>
 #include <TinyGPSPlus.h>
+#include <HTTPClient.h>
 #include <TimeLib.h>
-#include <Adafruit_SSD1306.h>
 #include <math.h>
 #include <Wire.h>
+#include <WiFi.h>
 
 #include "config.h"   // WiFi + MQTT credentials
 
