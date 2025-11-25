@@ -1,13 +1,13 @@
 #pragma once
 
-#include <WiFi.h>
-#include <HTTPClient.h>
+#include <Adafruit_SSD1306.h>
 #include <PubSubClient.h>
 #include <TinyGPSPlus.h>
+#include <HTTPClient.h>
 #include <TimeLib.h>
-#include <Adafruit_SSD1306.h>
 #include <math.h>
 #include <Wire.h>
+#include <WiFi.h>
 
 #include "config.h"   // WiFi + MQTT credentials
 
@@ -34,7 +34,7 @@ int yy{0}, mm{0}, dd{0}, hs{0}, mins{0}, secs{0};
 
 // Timer helpers
 // Sensor printing and publishing intervals
-int delayPub{10}, delayPrint{3};    // Sensor readings are published every 10 seconds and printed every 3
+int delayPub{3}, delayPrint{3};     // Sensor readings are published every 10 seconds and printed every 3
 long lastPub{0}, lastPrint{0};      // To hold the value of last call of the millis() function
 
 // -------- MQTT Client --------
