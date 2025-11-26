@@ -10,7 +10,7 @@ export function useMetrics() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch("http://172.20.10.10:8080/metrics")
+      fetch("http://10.50.77.144:8080/metrics")
         .then(res => res.json())
         .then(setMetrics)
         .catch(() => {});

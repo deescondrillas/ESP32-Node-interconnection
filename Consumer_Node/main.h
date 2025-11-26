@@ -5,7 +5,7 @@
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
-#include <JPEGDecoder.h>   // For rendering JPEG plot
+#include <JPEGDecoder.h>
 #include <Arduino.h>
 
 #include "config.h"
