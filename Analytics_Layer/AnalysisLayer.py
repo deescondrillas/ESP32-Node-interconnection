@@ -10,10 +10,20 @@ import plotly.graph_objects as go
 from typing import Dict, Optional, Tuple
 
 # --- Zone Delimitation ---
+"""ZONES: Dict[str, Dict[str, float]] = {
+    "Cafe":     {"xmin": 260.0, "xmax": 310.0, "ymin": 336.0, "ymax": 400.0},
+    "Biblio":   {"xmin": 165.0, "xmax": 218.0, "ymin": 392.0, "ymax": 425.0},
+    "A1A2":     {"xmin": 170.0, "xmax": 267.0, "ymin": 404.0, "ymax": 539.0},
+    "Life":     {"xmin": 0.0, "xmax": 200.0, "ymin": 540.0, "ymax": 700.0},
+    "Aulas4":   {"xmin": 367.0, "xmax": 591.0, "ymin": 50.0, "ymax": 400.0},
+}"""
+
 ZONES: Dict[str, Dict[str, float]] = {
-    "cafeteria": {"xmin": 178.0, "xmax": 190.0, "ymin": 476.0, "ymax": 486.0},
-    "library":   {"xmin": 170.0, "xmax": 180.0, "ymin": 460.0, "ymax": 475.0},
-    "campus":    {"xmin": 1000.0, "xmax": 1000.0, "ymin": 0.0, "ymax": 0.0},
+    "Cafe":     {"xmin": 336.0, "xmax": 400.0, "ymin": 260.0, "ymax": 310.0},
+    "Biblio":   {"xmin": 392.0, "xmax": 425.0, "ymin": 165.0, "ymax": 218.0},
+    "A1A2":     {"xmin": 404.0, "xmax": 539.0, "ymin": 170.0, "ymax": 267.0},
+    "Life":     {"xmin": 540.0, "xmax": 700.0, "ymin": 0.0, "ymax": 200.0},
+    "Aulas4":   {"xmin": 50.0, "xmax": 400.0, "ymin": 367.0, "ymax": 591.0},
 }
 
 # --- Postgres ---
@@ -38,9 +48,9 @@ def load_data(hours: int = 24) -> pd.DataFrame:
     q = f"""
     SELECT device_id, rssi, down, up, lat, lon, ts
     FROM network_data
-    WHERE ts >= now() - interval '{hours} hours'
     ORDER BY ts
     """
+    # WHERE ts >= now() - interval '{hours} hours'
 
     # Connection
     with get_conn() as conn:
@@ -56,7 +66,7 @@ def load_data(hours: int = 24) -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    df = df.dropna(subset=["lat", "lon"])       # Drops rows without coords
+    df = df.dropna(subset=["lat", "lon", "down", "up"])       # Drops rows without coords or data
     return df
 
 # --- Filter ---
@@ -68,8 +78,8 @@ def filter_by_zone(df: pd.DataFrame, zone: str) -> pd.DataFrame:
 
     # Filters data by zone
     return df[
-        (df["lat"].between(z["xmin"], z["xmax"])) &
-        (df["lon"].between(z["ymin"], z["ymax"]))
+        (df["lon"].between(z["xmin"], z["xmax"])) &
+        (df["lat"].between(z["ymin"], z["ymax"]))
     ]
 
 # --- Hourly statistics ---
@@ -93,9 +103,10 @@ def compute_hourly_stats(df: pd.DataFrame, metric: str = "down") -> pd.DataFrame
 # --- Plot ---
 # Returns an HTML string containing a 3D surface plot.
 # FastAPI can directly return this as HTMLResponse.
-def generate_3d_surface(df: pd.DataFrame, metric: str = "down") -> str:
+def generate_3d_surface(df: pd.DataFrame, metric: str = "down", hour_start: int | None = None, hour_end: int | None = None) -> str:
     if df.empty:
         return "<h1>No data to show</h1>"
+
 
     if metric not in ["down", "up", "rssi"]:
         raise ValueError("metric must be 'down', 'up', or 'rssi'")
@@ -164,6 +175,7 @@ def generate_3d_surface(df: pd.DataFrame, metric: str = "down") -> str:
     )
 
     return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
 
 # --- heat map ---
 def generate_heatmap(df: pd.DataFrame, metric: str = "rssi") -> str:

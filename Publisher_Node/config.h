@@ -3,7 +3,7 @@
 
 // WiFi
 //const char* WIFI_SSID_VAR     = "";
-//const char* WIFI_PASSWORD_VAR = "149F5250gtYFVWDx";
+//const char* WIFI_PASSWORD_VAR = "";
 const char* WIFI_SSID_VAR     = "Tec-IoT";                      //Network name
 const char* WIFI_PASSWORD_VAR = "spotless.magnetic.bridge";     //Network password
 
