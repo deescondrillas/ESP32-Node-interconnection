@@ -21,7 +21,13 @@ src/
     │   └—— ...
     └—— package-lock.json
 
-
-// npm install --legacy-peer-deps
-// (npm i)
-// npm run dev
+// Steps:
+  1. Start postgreSQL
+    brew services start postgresql
+  2. Start mosquitto
+    brew services start mosquitto
+  3. Start python servers
+    ~python mqtt_to_postgres
+    ~python server.py
+  4. Launch web page
+    ~npm run dev

@@ -48,8 +48,9 @@ export function IoTDashboard() {
 
         <div className="w-full h-[600px] rounded-3xl overflow-hidden">
           <iframe
-            src="http://localhost:5000/plot"
-            className="w-full h-full border-0"
+            src="http://localhost:8080/plot"
+            style = {{ width: "100%", height: "100%", border: "0" }}
+            // className="w-full h-full border-0"
           />
         </div>
 

@@ -10,11 +10,11 @@ export function useMetrics() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch("http://localhost:5000/metrics")
+      fetch("http://172.20.10.10:8080/metrics")
         .then(res => res.json())
         .then(setMetrics)
         .catch(() => {});
-    }, 2000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
