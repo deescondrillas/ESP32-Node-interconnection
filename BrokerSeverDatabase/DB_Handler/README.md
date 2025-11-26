@@ -1,3 +1,3 @@
-# MQTT –› PostgreSQL Subscriber
+# MQTT Broker –› PostgreSQL Subscriber
 
-This module listens to MQTT messages published by ESP32 devices, parses the payload, and stores the data into a PostgreSQL database.
+This script subscribes to an MQTT broker, receives messages published by the ESP32 devices (via the broker), parses the payload, and stores the data into a PostgreSQL database.
