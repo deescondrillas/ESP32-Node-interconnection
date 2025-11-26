@@ -90,10 +90,7 @@ def serve_file():
     # Insert into DB
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO network_data (device_id, rssi, down, up, lat, lon, ts) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (DEVICE_ID, None, mbps, None, None, None, datetime.now())
-    )
+    # cur.execute("INSERT INTO network_data (device_id, rssi, down, up, lat, lon, ts) VALUES (%s,%s,%s,%s,%s,%s,%s)", (DEVICE_ID, None, mbps, None, None, None, datetime.now()))
     conn.commit()
     cur.close()
     conn.close()
@@ -210,6 +207,7 @@ def live_plot():
     fig.update_layout(coloraxis_colorbar=dict(title="MBps"))
     fig.update_layout(paper_bgcolor="white", margin=dict(l=0, r=0, t=0, b=0))
     fig.update_layout(autosize=True, margin=dict(l=0, r=0, t=0, b=0))
+    fig.update_layout(scene_camera=dict(eye=dict(x=-1.6, y=-1.6, z=1.2)))
 
 
     # Auto-refresh every second
@@ -223,9 +221,13 @@ def live_plot():
     return Response(html, mimetype='text/html')
 
 
-# Convert to JPEG
-@app.route("/plot.jpg")
-def live_plot_jpeg():
+@app.route("/plot.bin")
+def live_plot_bin():
+    import plotly.io as pio
+    from PIL import Image
+    import numpy as np
+    from flask import Response
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -243,14 +245,13 @@ def live_plot_jpeg():
     if not rows:
         return "<h3>No data available.</h3>", 404
 
-    df = pd.DataFrame(rows, columns=["device_id", "lat", "lon", "down", "up", "ts"])
+    df = pd.DataFrame(rows, columns=["device_id","lat","lon","down","up","ts"])
     df["throughput"] = df["down"].fillna(0)
 
+    # 1. Create Plotly figure
     fig = px.scatter_3d(
         df,
-        x="lat",
-        y="lon",
-        z="throughput",
+        x="lat", y="lon", z="throughput",
         color="throughput",
         color_continuous_scale=["#A24E35","#BF915A","#C6C2A4","#80949D","#09181A"],
         opacity=0.9,
@@ -259,9 +260,26 @@ def live_plot_jpeg():
         hover_data=["device_id","down","up","ts"]
     )
 
-    # Convert to JPEG
-    img_bytes = pio.to_image(fig, format="jpeg", width=128, height=160, scale=1)
-    return Response(img_bytes, mimetype="image/jpeg")
+    # 2. Render to PNG in memory
+    png_bytes = pio.to_image(fig, format="png", width=128, height=160, scale=1)
+
+    # 3. Convert PNG → PIL Image
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+
+    # 4. Convert to RGB565 buffer
+    arr = np.array(img)  # shape: (H, W, 3)
+
+    r = (arr[:, :, 0] >> 3).astype(np.uint16)
+    g = (arr[:, :, 1] >> 2).astype(np.uint16)
+    b = (arr[:, :, 2] >> 3).astype(np.uint16)
+
+    rgb565 = (r << 11) | (g << 5) | b
+    rgb565_bytes = rgb565.astype("<u2").tobytes()  # Little-endian uint16
+
+
+    # 5. Return as binary stream
+    return Response(rgb565_bytes, mimetype="application/octet-stream")
+
 
 # MAIN SERVER ENTRY
 if __name__ == "__main__":
