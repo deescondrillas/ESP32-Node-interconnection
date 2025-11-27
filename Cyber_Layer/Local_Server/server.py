@@ -4,9 +4,10 @@ from datetime import datetime
 from flask_cors import CORS
 import plotly.express as px
 import plotly.io as pio
+from PIL import Image
+import time, os, io
 import pandas as pd
 import numpy as np
-import time, os
 import psycopg
 
 
@@ -199,9 +200,9 @@ def live_plot():
     )
 
     fig.update_scenes(
-        xaxis=dict(title="Latitude (m)", showgrid=False, zeroline=False, showbackground=False),
-        yaxis=dict(title="Longitude (m)", showgrid=False, zeroline=False, showbackground=False),
-        zaxis=dict(title="Download speed (MBps)", showgrid=False, zeroline=False, showbackground=False)
+        xaxis=dict(title="Latitude (m)", gridcolor="gray", zeroline=False, showbackground=False),
+        yaxis=dict(title="Longitude (m)", gridcolor="gray", zeroline=False, showbackground=False),
+        zaxis=dict(title="Download speed (MBps)", gridcolor="gray", zeroline=False, showbackground=False)
     )
 
     fig.update_layout(coloraxis_colorbar=dict(title="MBps"))
@@ -223,62 +224,78 @@ def live_plot():
 
 @app.route("/plot.bin")
 def live_plot_bin():
-    import plotly.io as pio
-    from PIL import Image
-    import numpy as np
-    from flask import Response
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
 
-    conn = get_db_connection()
-    cur = conn.cursor()
+        cur.execute("""
+            SELECT device_id, lat, lon, down, up, ts
+            FROM network_data
+            WHERE lat IS NOT NULL AND lon IS NOT NULL
+            ORDER BY ts DESC
+            LIMIT 100
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
 
-    cur.execute("""
-        SELECT device_id, lat, lon, down, up, ts
-        FROM network_data
-        WHERE lat IS NOT NULL AND lon IS NOT NULL
-        ORDER BY ts DESC
-        LIMIT 100
-    """)
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+        if not rows:
+            # No data yet → tell ESP32 with 404
+            return Response(b"", status=404, mimetype="application/octet-stream")
 
-    if not rows:
-        return "<h3>No data available.</h3>", 404
+        df = pd.DataFrame(rows, columns=["device_id", "lat", "lon", "down", "up", "ts"])
+        df["throughput"] = df["down"].fillna(0)
 
-    df = pd.DataFrame(rows, columns=["device_id","lat","lon","down","up","ts"])
-    df["throughput"] = df["down"].fillna(0)
+        WIDTH = 160
+        HEIGHT = 128
 
-    # 1. Create Plotly figure
-    fig = px.scatter_3d(
-        df,
-        x="lat", y="lon", z="throughput",
-        color="throughput",
-        color_continuous_scale=["#A24E35","#BF915A","#C6C2A4","#80949D","#09181A"],
-        opacity=0.9,
-        height=160,
-        width=128,
-        hover_data=["device_id","down","up","ts"]
-    )
+        fig = px.scatter_3d(
+            df,
+            x="lat",
+            y="lon",
+            z="throughput",
+            color="throughput",
+            color_continuous_scale=["#A24E35", "#BF915A", "#C6C2A4", "#80949D", "#09181A"],
+            opacity=0.9,
+            height=HEIGHT,
+            width=WIDTH,
+            hover_data=["device_id", "down", "up", "ts"],
+        )
 
-    # 2. Render to PNG in memory
-    png_bytes = pio.to_image(fig, format="png", width=128, height=160, scale=1)
+        fig.update_traces(marker=dict(size=4, line=dict(width=0)))
 
-    # 3. Convert PNG → PIL Image
-    img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        fig.update_scenes(
+            xaxis=dict(title="Latitude (m)", gridcolor="gray", showbackground=False, tickfont=dict(size=8)),
+            yaxis=dict(title="Longitude (m)", gridcolor="gray", showbackground=False, tickfont=dict(size=8)),
+            zaxis=dict(title="Download speed (MBps)", gridcolor="gray", showbackground=False, tickfont=dict(size=8))
+        )
 
-    # 4. Convert to RGB565 buffer
-    arr = np.array(img)  # shape: (H, W, 3)
+        fig.update_layout(
+            coloraxis_colorbar=dict(title="", thickness=4, len=0.4, tickvals=[], ticks="", ticktext=[], outlinewidth=0, bgcolor="rgba(0,0,0,0)")
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=0, b=0),paper_bgcolor="white",)
+        fig.update_layout(scene_camera=dict(eye=dict(x=-1.8, y=-1.8, z=1.3)))
 
-    r = (arr[:, :, 0] >> 3).astype(np.uint16)
-    g = (arr[:, :, 1] >> 2).astype(np.uint16)
-    b = (arr[:, :, 2] >> 3).astype(np.uint16)
+        # Requires `kaleido`
+        png_bytes = pio.to_image(fig, format="png", width=WIDTH, height=HEIGHT, scale=1)
 
-    rgb565 = (r << 11) | (g << 5) | b
-    rgb565_bytes = rgb565.astype("<u2").tobytes()  # Little-endian uint16
+        img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        arr = np.array(img)  # (H, W, 3)
 
+        # RGB888 → RGB565
+        r = (arr[:, :, 0] >> 3).astype(np.uint16)
+        g = (arr[:, :, 1] >> 2).astype(np.uint16)
+        b = (arr[:, :, 2] >> 3).astype(np.uint16)
 
-    # 5. Return as binary stream
-    return Response(rgb565_bytes, mimetype="application/octet-stream")
+        rgb565 = (r << 11) | (g << 5) | b
+        rgb565_bytes = rgb565.astype("<u2").tobytes()  # little-endian uint16
+
+        return Response(rgb565_bytes, mimetype="application/octet-stream")
+
+    except Exception as e:
+        # Log to server console so you can see the real error
+        print("ERROR in /plot.bin:", e)
+        return Response(b"", status=500, mimetype="application/octet-stream")
 
 
 # MAIN SERVER ENTRY

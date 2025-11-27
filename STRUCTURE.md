@@ -18,6 +18,9 @@ src/
 │   └—— AnalysisLayer.py
 └—— Application_Layer/
     ├—— IoT_Frontend/
+    │   ├—— src
+    │   │   └—— hooks
+    │   │       └—— useMetrics.ts
     │   └—— ...
     └—— package-lock.json
 
