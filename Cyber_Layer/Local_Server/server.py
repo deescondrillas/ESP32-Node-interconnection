@@ -117,10 +117,7 @@ def upload():
     # Insert into DB
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO network_data (device_id, rssi, down, up, lat, lon, ts) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (DEVICE_ID, None, None, mbps, None, None, datetime.now())
-    )
+    # cur.execute("INSERT INTO network_data (device_id, rssi, down, up, lat, lon, ts) VALUES (%s,%s,%s,%s,%s,%s,%s)",(DEVICE_ID, None, None, mbps, None, None, datetime.now()))
     conn.commit()
     cur.close()
     conn.close()
