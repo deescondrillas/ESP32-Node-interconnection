@@ -21,8 +21,8 @@ PG_HOST = "localhost"
 PG_PORT = 5432
 PG_DB   = "IoT1"
 PG_USER = "postgres"
-PG_PASS = 'vivaHAASf1"'         # Charly's Password
-# PG_PASS = "CMF-THW-PNK-79l"     # Franco's Password
+# PG_PASS = 'vivaHAASf1"'         # Charly's Password
+PG_PASS = "CMF-THW-PNK-79l"     # Franco's Password
 DEVICE_ID = "ESP32_00"
 
 # REAL-TIME METRICS STORAGE

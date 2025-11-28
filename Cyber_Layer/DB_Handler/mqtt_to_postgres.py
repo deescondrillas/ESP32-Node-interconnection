@@ -21,8 +21,8 @@ PG_HOST = os.getenv("PG_HOST", "localhost")                 # Location of the da
 PG_PORT = int(os.getenv("PG_PORT", 5432))                   # Port
 PG_DB = os.getenv("PG_DB", "IoT1")                          # Database name
 PG_USER = os.getenv("PG_USER", "postgres")                  # Owner of the database
-PG_PASS = os.getenv("PG_PASS", 'vivaHAASf1"')               # Charly's Password
-# PG_PASS = os.getenv("PG_PASS", "CMF-THW-PNK-79l")           # Franco's Password
+# PG_PASS = os.getenv("PG_PASS", 'vivaHAASf1"')               # Charly's Password
+PG_PASS = os.getenv("PG_PASS", "CMF-THW-PNK-79l")           # Franco's Password
 # Database connection parameters
 PG_MIN_CONN = 1
 PG_MAX_CONN = 10
